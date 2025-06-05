@@ -35,10 +35,37 @@ NSString * DEFAULT_LICENSE_SERVER_URL = @"https://fps.ezdrm.com/api/licenses/";
         finalLicenseURL = [[NSURL alloc] initWithString: DEFAULT_LICENSE_SERVER_URL];
     }
     NSURL * ksmURL = finalLicenseURL;
+
+    // Extract AxDrmMessage query parameter from finalLicenseURL
+    NSURLComponents *components = [NSURLComponents componentsWithURL:finalLicenseURL resolvingAgainstBaseURL:NO];
+    NSString *axDrmMessage = nil;
+    for (NSURLQueryItem *item in components.queryItems) {
+        if ([item.name isEqualToString:@"AxDrmMessage"]) {
+            axDrmMessage = item.value;
+            break;
+        }
+    }
+
+    // Remove AxDrmMessage from finalLicenseURL if axDrmMessage exists
+    if (axDrmMessage != nil && components.queryItems != nil) {
+        NSMutableArray<NSURLQueryItem *> *filteredItems = [NSMutableArray array];
+        for (NSURLQueryItem *item in components.queryItems) {
+            if (![item.name isEqualToString:@"AxDrmMessage"]) {
+                [filteredItems addObject:item];
+            }
+        }
+        components.queryItems = filteredItems;
+        ksmURL = components.URL;
+    }
+    
     
     NSMutableURLRequest * request = [[NSMutableURLRequest alloc] initWithURL:ksmURL];
     [request setHTTPMethod:@"POST"];
-    [request setValue:@"application/octet-stream" forHTTPHeaderField:@"Content-type"];
+    // [request setValue:@"application/octet-stream" forHTTPHeaderField:@"Content-type"];
+    if (axDrmMessage != nil) {
+        [request setValue:axDrmMessage forHTTPHeaderField:@"X-AxDRM-Message"];
+    }
+
     [request setHTTPBody:requestBytes];
     
     @try {
